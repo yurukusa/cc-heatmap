@@ -57,7 +57,7 @@ npx cc-heatmap --out ~/Desktop/my-heatmap.html
 
 ## Part of cc-toolkit
 
-One of 27 free tools for understanding your Claude Code usage.
+One of 30 free tools for understanding your Claude Code usage.
 → [yurukusa.github.io/cc-toolkit](https://yurukusa.github.io/cc-toolkit/)
 
 ## License
