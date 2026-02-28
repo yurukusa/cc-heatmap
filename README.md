@@ -4,6 +4,8 @@
 
 Reads `~/ops/proof-log/YYYY-MM-DD.md` files and generates a beautiful standalone HTML heatmap — like GitHub's contribution graph but for Claude Code sessions.
 
+**[Live Demo →](https://yurukusa.github.io/cc-heatmap/)** *(synthetic example data)*
+
 ![screenshot preview: dark green heatmap grid showing 52 weeks of AI activity]
 
 ## Install & run

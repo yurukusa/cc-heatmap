@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>cc-heatmap — Live Demo</title>
+  <meta name="description" content="GitHub-style AI activity heatmap for Claude Code sessions. See a live demo with synthetic data.">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    header {
+      margin-bottom: 32px;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(57,211,83,0.1);
+      color: #39d353;
+      border: 1px solid rgba(57,211,83,0.3);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .demo-banner {
+      display: inline-block;
+      background: rgba(210,153,34,0.12);
+      color: #d29922;
+      border: 1px solid rgba(210,153,34,0.4);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      margin-left: 8px;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #f0f6fc;
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      color: #7d8590;
+      font-size: 0.9rem;
+    }
+    .stats-strip {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 32px;
+      padding: 20px 24px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+    }
+    .stat { flex: 1; min-width: 120px; }
+    .stat-n {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #39d353;
+      line-height: 1;
+    }
+    .stat-l {
+      font-size: 0.8rem;
+      color: #7d8590;
+      margin-top: 4px;
+    }
+    .heatmap-wrap {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 24px;
+      overflow-x: auto;
+      margin-bottom: 24px;
+    }
+    .heatmap-inner {
+      display: inline-block;
+    }
+    #heatmap-svg { display: block; overflow: visible; margin: 20px 32px 8px 36px; }
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      justify-content: flex-end;
+      margin-top: 16px;
+      font-size: 0.78rem;
+      color: #7d8590;
+    }
+    .legend-cell {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+    .top-project {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(57,211,83,0.08);
+      border: 1px solid rgba(57,211,83,0.2);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      margin-top: 12px;
+    }
+    .top-project-dot {
+      width: 8px;
+      height: 8px;
+      background: #39d353;
+      border-radius: 50%;
+    }
+    rect:hover { opacity: 0.80; cursor: default; }
+
+    /* CTA section */
+    .cta-section {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 28px 32px;
+      margin-bottom: 24px;
+    }
+    .cta-section h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #f0f6fc;
+      margin-bottom: 12px;
+    }
+    .cta-section p {
+      color: #7d8590;
+      font-size: 0.875rem;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+    .code-block {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 0.875rem;
+      color: #39d353;
+      margin-bottom: 16px;
+      overflow-x: auto;
+    }
+    .cta-links {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .cta-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    .cta-link:hover { opacity: 0.8; }
+    .cta-link-primary {
+      background: #238636;
+      color: #fff;
+      border: 1px solid #2ea043;
+    }
+    .cta-link-secondary {
+      background: transparent;
+      color: #e6edf3;
+      border: 1px solid #30363d;
+    }
+    .footer-note {
+      text-align: center;
+      color: #484f58;
+      font-size: 0.78rem;
+      margin-top: 24px;
+    }
+    .footer-note a { color: #7d8590; text-decoration: none; }
+    .footer-note a:hover { color: #39d353; }
+
+    /* Tooltip */
+    #tooltip {
+      position: fixed;
+      background: #1c2128;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      color: #e6edf3;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.1s;
+      z-index: 100;
+      white-space: pre-line;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 600px) {
+      .stats-strip { gap: 16px; padding: 16px; }
+      .stat-n { font-size: 1.4rem; }
+      .cta-section { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <span class="badge">Claude Code Activity</span>
+      <span class="demo-banner">Example Data — Not Real</span>
+    </div>
+    <h1>AI Activity Heatmap</h1>
+    <p class="subtitle">Last 52 weeks of autonomous AI development &middot; <em>Synthetic demo data</em></p>
+    <div class="top-project">
+      <span class="top-project-dot"></span>
+      Most active project: <strong id="top-project-label">Loading...</strong>
+    </div>
+  </header>
+
+  <div class="stats-strip">
+    <div class="stat">
+      <div class="stat-n" id="stat-hours">—</div>
+      <div class="stat-l">Total AI time</div>
+    </div>
+    <div class="stat">
+      <div class="stat-n" id="stat-days">—</div>
+      <div class="stat-l">Active days</div>
+    </div>
+    <div class="stat">
+      <div class="stat-n" id="stat-longest">—</div>
+      <div class="stat-l">Longest streak</div>
+    </div>
+    <div class="stat">
+      <div class="stat-n" id="stat-current">—</div>
+      <div class="stat-l">Current streak</div>
+    </div>
+    <div class="stat">
+      <div class="stat-n">364</div>
+      <div class="stat-l">Days tracked</div>
+    </div>
+  </div>
+
+  <div class="heatmap-wrap">
+    <div class="heatmap-inner">
+      <svg id="heatmap-svg" xmlns="http://www.w3.org/2000/svg" overflow="visible"></svg>
+      <div class="legend">
+        <span>Less</span>
+        <span class="legend-cell" style="background:#161b22"></span>
+        <span class="legend-cell" style="background:#0e4429"></span>
+        <span class="legend-cell" style="background:#006d32"></span>
+        <span class="legend-cell" style="background:#26a641"></span>
+        <span class="legend-cell" style="background:#39d353"></span>
+        <span>More</span>
+        <span style="margin-left:12px;color:#484f58">1 cell = 1 day &middot; hover for details</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cta-section">
+    <h2>Try it on your own data</h2>
+    <p>
+      cc-heatmap reads your <code style="background:#21262d;padding:1px 5px;border-radius:3px;font-size:0.85em">~/ops/proof-log/YYYY-MM-DD.md</code> files
+      and generates a heatmap like this one — but showing your actual Claude Code sessions.
+      No config needed. Zero dependencies.
+    </p>
+    <div class="code-block">npx cc-ai-heatmap --open</div>
+    <div class="cta-links">
+      <a class="cta-link cta-link-primary" href="https://www.npmjs.com/package/cc-ai-heatmap" target="_blank" rel="noopener">
+        npm install
+      </a>
+      <a class="cta-link cta-link-secondary" href="https://github.com/yurukusa/cc-heatmap" target="_blank" rel="noopener">
+        GitHub
+      </a>
+      <a class="cta-link cta-link-secondary" href="https://yurukusa.github.io/cc-toolkit/" target="_blank" rel="noopener">
+        cc-toolkit (12 tools)
+      </a>
+    </div>
+  </div>
+
+  <p class="footer-note">
+    Generated by <a href="https://github.com/yurukusa/cc-heatmap">cc-heatmap</a> &middot;
+    Part of <a href="https://yurukusa.github.io/cc-toolkit/">cc-toolkit</a> &middot;
+    This page shows <strong>synthetic example data</strong>. Your real data will look different.
+  </p>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// ── Seeded PRNG (mulberry32) ─────────────────────────────────────
+// Deterministic: same seed → same heatmap every time.
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+const rng = mulberry32(0xCC4EA7);
+
+// ── Synthetic data generation ────────────────────────────────────
+// Simulates an active developer: ~5 days/week, with realistic
+// patterns (more active mid-week, occasional weekend work).
+
+const PROJECTS = [
+  'cc-heatmap', 'spell-cascade', 'nursery-shift',
+  'ai-cost-reality', 'cc-wrapped', 'cc-roast',
+];
+
+// Compute date range: last 52 weeks ending today
+// We anchor to a fixed reference date (2026-01-18) so the
+// demo page looks the same every time regardless of when it's loaded.
+// "today" for demo purposes = 2026-01-18.
+const DEMO_TODAY = new Date('2026-01-18T12:00:00Z');
+
+function toYMD(d) {
+  return d.toISOString().slice(0, 10);
+}
+function addDays(d, n) {
+  const r = new Date(d);
+  r.setUTCDate(r.getUTCDate() + n);
+  return r;
+}
+
+const todayStr = toYMD(DEMO_TODAY);
+
+// Range start: 52 weeks back, rewind to Sunday
+const rangeStart = addDays(DEMO_TODAY, -52 * 7);
+const dow = rangeStart.getUTCDay(); // 0=Sun
+const sunday = addDays(rangeStart, -dow);
+
+// Generate synthetic minutes for each date in range
+const minutesByDate = {};
+const projectsByDate = {};
+
+let cur = new Date(sunday);
+while (toYMD(cur) <= todayStr) {
+  const ds = toYMD(cur);
+  const utcDow = cur.getUTCDay(); // 0=Sun, 6=Sat
+
+  // Probability of activity by day of week
+  const dayWeight = [0.25, 0.75, 0.85, 0.88, 0.82, 0.70, 0.30][utcDow];
+
+  if (rng() < dayWeight) {
+    // Active day: generate 30–420 min, skewed toward 60–240
+    const baseMin = 30 + Math.floor(rng() * 120);
+    const bonus   = rng() < 0.35 ? Math.floor(rng() * 180) : 0;
+    const burst   = rng() < 0.10 ? Math.floor(rng() * 120) : 0;
+    const totalMin = baseMin + bonus + burst;
+
+    minutesByDate[ds] = totalMin;
+
+    // Assign to 1-3 projects
+    const numProj = 1 + (rng() < 0.4 ? 1 : 0) + (rng() < 0.15 ? 1 : 0);
+    const shuffled = [...PROJECTS].sort(() => rng() - 0.5).slice(0, numProj);
+    let remaining = totalMin;
+    projectsByDate[ds] = {};
+    shuffled.forEach((p, i) => {
+      const share = i === shuffled.length - 1
+        ? remaining
+        : Math.floor(remaining * (0.5 + rng() * 0.4));
+      projectsByDate[ds][p] = share;
+      remaining -= share;
+    });
+  }
+
+  cur = addDays(cur, 1);
+}
+
+// ── Aggregate stats ──────────────────────────────────────────────
+let totalMinutes = 0;
+let activeDays = 0;
+let longestStreak = 0;
+let currentStreak = 0;
+let tempStreak = 0;
+const allProjects = {};
+
+let sc = new Date(sunday);
+while (toYMD(sc) <= todayStr) {
+  const ds = toYMD(sc);
+  const min = minutesByDate[ds] || 0;
+  if (min > 0) {
+    totalMinutes += min;
+    activeDays++;
+    tempStreak++;
+    if (tempStreak > longestStreak) longestStreak = tempStreak;
+    currentStreak = tempStreak;
+  } else {
+    if (ds < todayStr) {
+      tempStreak = 0;
+      currentStreak = 0;
+    }
+  }
+  if (projectsByDate[ds]) {
+    for (const [p, m] of Object.entries(projectsByDate[ds])) {
+      allProjects[p] = (allProjects[p] || 0) + m;
+    }
+  }
+  sc = addDays(sc, 1);
+}
+
+const topProjectEntry = Object.entries(allProjects).sort((a, b) => b[1] - a[1])[0];
+
+function fmtHours(min) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+// Update stats strip
+document.getElementById('stat-hours').textContent = fmtHours(totalMinutes);
+document.getElementById('stat-days').textContent = activeDays;
+document.getElementById('stat-longest').textContent = longestStreak;
+document.getElementById('stat-current').textContent = currentStreak;
+document.getElementById('top-project-label').textContent =
+  topProjectEntry ? `${topProjectEntry[0]} (${fmtHours(topProjectEntry[1])})` : 'N/A';
+
+// ── Build SVG heatmap ────────────────────────────────────────────
+const LEVELS = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353'];
+const CELL = 13;
+const GAP  = 3;
+const STEP = CELL + GAP;
+
+function getLevel(minutes) {
+  if (!minutes) return 0;
+  if (minutes < 30)  return 1;
+  if (minutes < 120) return 2;
+  if (minutes < 240) return 3;
+  return 4;
+}
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+let col = 0;
+let prevMonth = -1;
+const svgParts = [];
+const monthLabels = [];
+
+let wc = new Date(sunday);
+while (toYMD(wc) <= todayStr) {
+  for (let row = 0; row < 7; row++) {
+    const ds = toYMD(wc);
+    if (ds > todayStr) { wc = addDays(wc, 1); continue; }
+
+    const min = minutesByDate[ds] || 0;
+    const color = LEVELS[getLevel(min)];
+    const x = col * STEP;
+    const y = row * STEP;
+
+    const h = (min / 60).toFixed(1);
+    const topP = projectsByDate[ds]
+      ? Object.entries(projectsByDate[ds]).sort((a, b) => b[1] - a[1])[0]
+      : null;
+
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', x);
+    rect.setAttribute('y', y);
+    rect.setAttribute('width', CELL);
+    rect.setAttribute('height', CELL);
+    rect.setAttribute('rx', 2);
+    rect.setAttribute('fill', color);
+    rect.dataset.date = ds;
+    rect.dataset.min = min;
+    if (min > 0) {
+      rect.dataset.tip = `${ds}\n${h}h AI time${topP ? '\n' + topP[0] : ''}`;
+    } else {
+      rect.dataset.tip = ds;
+    }
+    svgParts.push({ x, y, rect });
+
+    // Month label (row 0 only)
+    const month = wc.getUTCMonth();
+    if (month !== prevMonth && row === 0) {
+      monthLabels.push({ x: col * STEP, label: MONTHS[month] });
+      prevMonth = month;
+    }
+
+    wc = addDays(wc, 1);
+  }
+  col++;
+}
+
+const svgWidth  = col * STEP;
+const svgHeight = 7 * STEP;
+
+const svg = document.getElementById('heatmap-svg');
+svg.setAttribute('width',   svgWidth);
+svg.setAttribute('height',  svgHeight);
+svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+
+// Month labels
+monthLabels.forEach(({ x, label }) => {
+  const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  t.setAttribute('x', x);
+  t.setAttribute('y', -4);
+  t.setAttribute('font-size', 11);
+  t.setAttribute('fill', '#7d8590');
+  t.setAttribute('font-family', 'system-ui,sans-serif');
+  t.textContent = label;
+  svg.appendChild(t);
+});
+
+// Day labels
+[
+  { y: 1 * STEP + CELL - 3, label: 'Mon' },
+  { y: 3 * STEP + CELL - 3, label: 'Wed' },
+  { y: 5 * STEP + CELL - 3, label: 'Fri' },
+].forEach(({ y, label }) => {
+  const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  t.setAttribute('x', -28);
+  t.setAttribute('y', y);
+  t.setAttribute('font-size', 10);
+  t.setAttribute('fill', '#7d8590');
+  t.setAttribute('font-family', 'system-ui,sans-serif');
+  t.textContent = label;
+  svg.appendChild(t);
+});
+
+// Cells
+svgParts.forEach(({ rect }) => svg.appendChild(rect));
+
+// ── Tooltip ──────────────────────────────────────────────────────
+const tooltip = document.getElementById('tooltip');
+
+svg.addEventListener('mouseover', (e) => {
+  const rect = e.target.closest('rect');
+  if (!rect || !rect.dataset.tip) return;
+  tooltip.textContent = rect.dataset.tip;
+  tooltip.style.opacity = '1';
+});
+
+svg.addEventListener('mousemove', (e) => {
+  tooltip.style.left = (e.clientX + 14) + 'px';
+  tooltip.style.top  = (e.clientY - 8) + 'px';
+});
+
+svg.addEventListener('mouseout', (e) => {
+  if (!e.target.closest('rect')) return;
+  tooltip.style.opacity = '0';
+});
+</script>
+</body>
+</html>
