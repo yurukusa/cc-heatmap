@@ -1,0 +1,36 @@
+{
+  "name": "cc-ai-heatmap",
+  "version": "1.0.0",
+  "description": "GitHub-style AI activity heatmap from Claude Code proof-log files",
+  "type": "module",
+  "bin": {
+    "cc-heatmap": "cli.mjs"
+  },
+  "scripts": {
+    "prepublishOnly": "node --check cli.mjs"
+  },
+  "files": [
+    "cli.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "claude-code",
+    "ai",
+    "heatmap",
+    "activity",
+    "visualization",
+    "proof-log",
+    "cli"
+  ],
+  "author": "yurukusa",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yurukusa/cc-heatmap"
+  },
+  "homepage": "https://github.com/yurukusa/cc-heatmap"
+}
